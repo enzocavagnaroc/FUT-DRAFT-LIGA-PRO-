@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FUT DRAFT - LIGA PRO ARCADE</title>
+    <!-- Fuente Retro Arcade Oficial -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 1. CONFIGURACIÓN GENERAL RETRO */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Press Start 2P', monospace; user-select: none; }
+        body { background-color: #0d0221; color: #fff; overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+
+        /* 2. FONDO ANIMADO */
+        .background-animation { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        .player-sprite { position: absolute; font-size: 40px; opacity: 0.15; animation: drift 12s linear infinite; bottom: -50px; }
+        .p1 { left: 10%; animation-duration: 14s; animation-delay: 0s; }
+        .p2 { left: 30%; animation-duration: 18s; animation-delay: 4s; }
+        .p3 { left: 60%; animation-duration: 15s; animation-delay: 2s; }
+        .p4 { left: 85%; animation-duration: 20s; animation-delay: 7s; }
+
+        @keyframes drift {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0.15; }
+            50% { opacity: 0.3; }
+            100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* 3. MENÚ PRINCIPAL */
+        .menu-container {
+            position: relative; z-index: 2; text-align: center; background: rgba(13, 2, 33, 0.85);
+            padding: 40px; border: 6px solid #00ffcc; border-radius: 4px; box-shadow: 0 0 20px #00ffcc, inset 0 0 15px #00ffcc;
+            transition: opacity 0.5s;
+        }
+        .logo-title { font-size: 32px; color: #fff; text-shadow: 4px 4px 0px #ff0055, -4px -4px 0px #00ffcc; animation: floatLogo 3s ease-in-out infinite; margin-bottom: 10px; }
+        .subtitle { font-size: 16px; color: #ffcc00; text-shadow: 2px 2px 0px #000; animation: floatLogo 3s ease-in-out infinite; animation-delay: 0.5s; margin-bottom: 50px; }
+        @keyframes floatLogo { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.02); } }
+
+        .menu-buttons { display: flex; flex-direction: column; gap: 20px; align-items: center; }
+        .arcade-btn {
+            background-color: #1a0842; color: #fff; border: 4px solid #fff; padding: 15px 40px; font-size: 14px;
+            cursor: pointer; width: 280px; box-shadow: 4px 4px 0px #fff; transition: all 0.1s ease;
+        }
+        .arcade-btn:hover { background-color: #ff0055; border-color: #ffcc00; box-shadow: 4px 4px 0px #ffcc00; transform: translateY(-2px); }
+        .arcade-btn:active { transform: translateY(4px) translateX(4px); box-shadow: 0px 0px 0px #fff; }
+        .insert-coin { margin-top: 40px; font-size: 10px; color: #555; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
+        /* =========================================
+           NUEVO: ESTILOS DEL SIMULADOR FUT DRAFT
+           ========================================= */
+        .hidden { display: none !important; }
+
+        #game-container {
+            position: relative; z-index: 3; width: 90%; max-width: 1000px; height: 90vh;
+            background: rgba(0, 0, 0, 0.8); border: 4px solid #fff; border-radius: 10px;
+            display: flex; flex-direction: column; padding: 20px;
+        }
+
+        /* Título superior */
+        .game-header { text-align: center; color: #00ffcc; font-size: 18px; margin-bottom: 20px; text-shadow: 2px 2px #000; }
+
+        /* Contenedor del Campo y las Cartas */
+        .draft-area { display: flex; flex: 1; gap: 20px; }
+
+        /* Cancha (Pitch) */
+        .pitch {
+            flex: 1; background: #0a4d22; border: 4px solid #fff; position: relative;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 20px;
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.05) 40px, rgba(255,255,255,0.05) 80px);
+        }
+        .pitch-row { display: flex; justify-content: space-around; width: 100%; }
+        .pitch-slot {
+            width: 60px; height: 80px; border: 2px dashed rgba(255,255,255,0.5);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 10px; color: #aaa; cursor: pointer; background: rgba(0,0,0,0.4);
+            transition: 0.2s; flex-direction: column; text-align: center;
+        }
+        .pitch-slot:hover { border-color: #ffcc00; background: rgba(255, 204, 0, 0.2); }
+        .slot-filled { border-style: solid; background: #111; color: #fff; }
+
+        /* Zona de Sobres (Pack Opening) */
+        .pack-area {
+            flex: 1; background: #111; border: 4px solid #555; padding: 15px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+        }
+        
+        .pack-flash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; z-index: 10; opacity: 0; pointer-events: none;
+        }
+        @keyframes flashEffect {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .options-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; z-index: 2; }
+        
+        /* Cartas de Jugadores */
+        .card {
+            width: 110px; height: 160px; background: #222; border: 4px solid #555;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.2s; position: relative;
+            animation: popCard 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+        }
+        .card:hover { transform: scale(1.1); z-index: 5; }
+        .card-sprite { font-size: 40px; margin-bottom: 5px; }
+        .card-rat { position: absolute; top: 5px; left: 5px; font-size: 14px; color: #fff; }
+        .card-name { font-size: 9px; text-align: center; margin-top: 5px; width: 90%; word-wrap: break-word; line-height: 1.2; }
+        
+        @keyframes popCard {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Cuadro de texto animado inferior */
+        .info-box {
+            margin-top: 15px; width: 100%; height: 80px; background: #000;
+            border: 4px solid #ffcc00; padding: 15px; color: #00ffcc;
+            font-size: 12px; line-height: 1.5; display: flex; align-items: center;
+            text-shadow: 1px 1px #000; box-shadow: inset 0 0 10px rgba(255, 204, 0, 0.3);
+        }
+        
+        /* Cursor de consola */
+        .cursor { display: inline-block; width: 10px; height: 12px; background: #00ffcc; animation: blink 1s infinite; margin-left: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Capa de fondo -->
+    <div class="background-animation">
+        <div class="player-sprite p1">⚽</div>
+        <div class="player-sprite p2">🧍‍♂️</div>
+        <div class="player-sprite p3">⚽</div>
+        <div class="player-sprite p4">🧍‍♂️</div>
+    </div>
+
+    <!-- MENÚ PRINCIPAL ORIGINAL -->
+    <div class="menu-container" id="main-menu">
+        <h1 class="logo-title">FUT DRAFT</h1>
+        <h2 class="subtitle">LIGA PRO</h2>
+        <div class="menu-buttons">
+            <button class="arcade-btn" onclick="iniciarJuego()">JUGAR</button>
+            <button class="arcade-btn" onclick="presionarBoton('ÁLBUM')">ÁLBUM</button>
+            <button class="arcade-btn" onclick="presionarBoton('OPCIONES')">OPCIONES</button>
+        </div>
+        <div class="insert-coin">INSERT COIN TO PLAY</div>
+    </div>
+
+    <!-- CONTENEDOR DEL JUEGO (Oculto al inicio) -->
+    <div id="game-container" class="hidden">
+        <div class="game-header" id="game-header">SELECCIONA UNA FORMACIÓN</div>
+        
+        <div class="draft-area">
+            <!-- La Cancha -->
+            <div class="pitch" id="pitch-container" style="display: none;">
+                <!-- Las filas se generarán dinámicamente con JS -->
+            </div>
+
+            <!-- Zona de Sobres -->
+            <div class="pack-area" id="pack-container">
+                <!-- Botones de Formación al inicio -->
+                <div class="options-grid" id="formation-options">
+                    <button class="arcade-btn" onclick="seleccionarFormacion('4-3-3')">4-3-3</button>
+                    <button class="arcade-btn" onclick="seleccionarFormacion('4-4-2')">4-4-2</button>
+                </div>
+
+                <!-- Aquí aparecen los jugadores -->
+                <div class="pack-flash" id="flash-effect"></div>
+                <div class="options-grid" id="player-options"></div>
+            </div>
+        </div>
+
+        <!-- Caja de Texto Animada -->
+        <div class="info-box" id="info-box">
+            <span id="typewriter-text">SISTEMA INICIADO. ESPERANDO SELECCIÓN...</span><span class="cursor"></span>
+        </div>
+    </div>
+
+    <script>
+        // === BASE DE DATOS LIGA PRO ===
+        // Siguiendo la regla: Cada equipo tiene el color de su camiseta para el marco.
+        // BSC (Amarillo), Emelec (Azul), LDU (Blanco), IDV (Negro/Morado).
+        const PLAYER_POOL = [
+            { name: "Javier Baez", team: "BSC", color: "#FFFF00", rat: 82, pos: "DFC" }, // Basado en tu historial
+            { name: "Kitu Diaz", team: "BSC", color: "#FFFF00", rat: 85, pos: "MC" },
+            { name: "Joao Rojas", team: "BSC", color: "#FFFF00", rat: 83, pos: "EI" },
+            { name: "Pedro Ortiz", team: "EME", color: "#0044CC", rat: 84, pos: "PO" },
+            { name: "L. Fernando Leon", team: "EME", color: "#0044CC", rat: 81, pos: "DFC" },
+            { name: "Facundo Castelli", team: "EME", color: "#0044CC", rat: 80, pos: "DC" },
+            { name: "A. Dominguez", team: "LDU", color: "#FFFFFF", rat: 86, pos: "PO" },
+            { name: "Alex Arce", team: "LDU", color: "#FFFFFF", rat: 84, pos: "DC" },
+            { name: "Kendry Paez", team: "IDV", color: "#8A2BE2", rat: 88, pos: "MC" },
+            { name: "Junior Sornoza", team: "IDV", color: "#8A2BE2", rat: 83, pos: "MC" },
+            { name: "M. Pineida", team: "ELN", color: "#FF0000", rat: 79, pos: "DFI" },
+            { name: "B. Ramirez", team: "LDU", color: "#FFFFFF", rat: 81, pos: "DFI" },
+            { name: "R. Ibarra", team: "IDV", color: "#8A2BE2", rat: 82, pos: "ED" },
+            { name: "F. Fydriszewski", team: "BSC", color: "#FFFF00", rat: 83, pos: "DC" }
+        ];
+
+        const FORMATIONS = {
+            "4-3-3": [
+                ["EI", "DC", "ED"],     // Delanteros
+                ["MC1", "MC2", "MC3"],  // Medios
+                ["DFI", "DFC1", "DFC2", "DFD"], // Defensas
+                ["PO"]                  // Portero
+            ],
+            "4-4-2": [
+                ["DC1", "DC2"],
+                ["MI", "MC1", "MC2", "MD"],
+                ["DFI", "DFC1", "DFC2", "DFD"],
+                ["PO"]
+            ]
+        };
+
+        let squad = {};
+        let currentPosTarget = "";
+        let availablePlayers = [...PLAYER_POOL];
+
+        // --- FUNCIONES DEL MENÚ ---
+        function presionarBoton(nombreBoton) {
+            alert("Menú de " + nombreBoton + " en construcción.");
+        }
+
+        function iniciarJuego() {
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            escribirTexto("SISTEMA DE DRAFT LIGA PRO ACTIVADO. ELIGE TU FORMACIÓN TÁCTICA.");
+        }
+
+        // --- LÓGICA DEL JUEGO ---
+        function seleccionarFormacion(formName) {
+            document.getElementById('formation-options').style.display = 'none';
+            document.getElementById('pitch-container').style.display = 'flex';
+            
+            const rows = FORMATIONS[formName];
+            const pitch = document.getElementById('pitch-container');
+            pitch.innerHTML = ''; // Limpiar cancha
+
+            // Dibujar la cancha basada en las filas de la formación
+            rows.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'pitch-row';
+                row.forEach(pos => {
+                    const slot = document.createElement('div');
+                    slot.className = 'pitch-slot';
+                    slot.id = 'slot-' + pos;
+                    slot.innerHTML = `+<br>${pos}`;
+                    slot.onclick = () => abrirSobre(pos);
+                    rowDiv.appendChild(slot);
+                });
+                pitch.appendChild(rowDiv);
+            });
+
+            escribirTexto(`FORMACIÓN ${formName} CONFIRMADA. TOCA UNA POSICIÓN EN LA CANCHA PARA ABRIR UN SOBRE.`);
+            document.getElementById('game-header').innerText = "CONSTRUYE TU PLANTILLA";
+        }
+
+        function abrirSobre(pos) {
+            // Prevenir abrir si ya tiene jugador
+            if(squad[pos]) {
+                escribirTexto(`LA POSICIÓN ${pos} YA ESTÁ OCUPADA.`);
+                return;
+            }
+
+            currentPosTarget = pos;
+            
+            // Animación de destello (Flash effect)
+            const flash = document.getElementById('flash-effect');
+            flash.style.animation = 'none';
+            flash.offsetHeight; // Forzar reflow
+            flash.style.animation = 'flashEffect 0.8s ease-out';
+
+            // Seleccionar 5 jugadores aleatorios
+            // Si la base se agota, rellenamos para evitar errores en el demo
+            if (availablePlayers.length < 5) availablePlayers = [...PLAYER_POOL];
+            
+            let shuffled = availablePlayers.sort(() => 0.5 - Math.random());
+            let options = shuffled.slice(0, 5);
+
+            const container = document.getElementById('player-options');
+            container.innerHTML = ''; // Limpiar sobres anteriores
+
+            escribirTexto(`ABRIENDO SOBRE PARA LA POSICIÓN: ${pos}...`);
+
+            options.forEach((p, index) => {
+                // Retrasar la aparición de cada carta levemente para dar efecto de cascada
+                setTimeout(() => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    // Regla Maestra: El color del marco define al equipo (ej. BSC = Amarillo)
+                    card.style.borderColor = p.color;
+                    card.style.boxShadow = `0 0 15px ${p.color}`;
+                    
+                    card.innerHTML = `
+                        <div class="card-rat">${p.rat}</div>
+                        <div class="card-sprite" style="color: ${p.color}">🧍‍♂️</div>
+                        <div class="card-name" style="color: ${p.color}">${p.team}</div>
+                        <div class="card-name">${p.name.toUpperCase()}</div>
+                    `;
+                    
+                    card.onclick = () => elegirJugador(p);
+                    container.appendChild(card);
+                }, index * 150); // 150ms entre cada carta
+            });
+        }
+
+        function elegirJugador(player) {
+            squad[currentPosTarget] = player;
+            
+            // Actualizar la cancha
+            const slot = document.getElementById('slot-' + currentPosTarget);
+            slot.classList.add('slot-filled');
+            slot.style.borderColor = player.color;
+            slot.style.boxShadow = `inset 0 0 10px ${player.color}`;
+            slot.innerHTML = `<span style="font-size:14px; font-weight:bold">${player.rat}</span><br><span style="font-size:8px">${player.name.split(' ').pop()}</span>`;
+
+            // Limpiar sobres
+            document.getElementById('player-options').innerHTML = '';
+            
+            // Animación de texto
+            escribirTexto(`¡HAS FICHADO A ${player.name.toUpperCase()} (${player.team}) CON VALORACIÓN DE ${player.rat}! ELIGE LA SIGUIENTE POSICIÓN.`);
+        }
+
+        // --- EFECTO DE MÁQUINA DE ESCRIBIR ---
+        let typeInterval;
+        function escribirTexto(texto) {
+            const el = document.getElementById('typewriter-text');
+            el.innerHTML = '';
+            clearInterval(typeInterval);
+            
+            let i = 0;
+            typeInterval = setInterval(() => {
+                el.innerHTML += texto.charAt(i);
+                i++;
+                if (i >= texto.length) clearInterval(typeInterval);
+            }, 30); // Velocidad de tipeo
+        }
+    </script>
+</body>
+</html>
